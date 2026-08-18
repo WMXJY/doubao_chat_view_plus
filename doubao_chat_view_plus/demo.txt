@@ -1,0 +1,52 @@
+(function enableDoubaoPasteImage() {
+  // 找到豆包原生的图片上传 input
+  function getUploadInput() {
+    // 优先找接受图片的 file input
+    const inputs = document.querySelectorAll('input[type="file"]');
+    for (const input of inputs) {
+      if (input.accept && input.accept.includes('image')) {
+        return input;
+      }
+    }
+    // 兜底返回第一个 file input
+    return inputs[0];
+  }
+
+  // 捕获阶段监听，优先于豆包自身事件执行
+  document.addEventListener('paste', async function (e) {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    // 遍历剪贴板，找图片
+    let imageFile = null;
+    for (const item of items) {
+      if (item.type.startsWith('image/')) {
+        imageFile = item.getAsFile();
+        break;
+      }
+    }
+
+    if (!imageFile) return;
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const fileInput = getUploadInput();
+    if (!fileInput) {
+      console.error('未找到豆包图片上传控件，脚本失效');
+      return;
+    }
+
+    // 构造 DataTransfer，模拟用户选择文件
+    const dataTransfer = new DataTransfer();
+    dataTransfer.items.add(imageFile);
+    fileInput.files = dataTransfer.files;
+
+    // 触发原生 change 事件，让豆包自己的上传逻辑处理
+    fileInput.dispatchEvent(new Event('change', { bubbles: true }));
+
+    console.log('✅ 图片已触发上传');
+  }, true); // true = 捕获阶段，优先级更高
+
+  console.log('✅ 豆包图片粘贴脚本已启用，Ctrl+V 即可粘贴上传');
+})();
